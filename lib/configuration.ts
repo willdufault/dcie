@@ -10,6 +10,7 @@ export class Configuration {
   successNotificationEmail: string;
   dataExportBucketName: string;
   dataExportBucketPrefix: string;
+  dataExportBucketSseKmsKeyArn: string;
   incrementalExportWindowSizeInMinutes: number;
   waitTimeToCheckExportStatusInSeconds: number;
   exportViewType: ExportViewType;
@@ -23,6 +24,7 @@ export class Configuration {
     this.successNotificationEmail = scope.node.tryGetContext('successNotificationEmail') as string;
     this.dataExportBucketName = scope.node.tryGetContext('dataExportBucketName') as string;
     this.dataExportBucketPrefix = scope.node.tryGetContext('dataExportBucketPrefix') as string;
+    this.dataExportBucketSseKmsKeyArn = scope.node.tryGetContext('dataExportBucketSseKmsKeyArn') as string;
     this.incrementalExportWindowSizeInMinutes = parseInt(scope.node.tryGetContext('incrementalExportWindowSizeInMinutes')) || 
       IncrementalExportDefaults.DEFAULT_INCREMENTAL_EXPORT_WINDOW_SIZE_IN_MINUTES;
     this.waitTimeToCheckExportStatusInSeconds = parseInt(scope.node.tryGetContext('waitTimeToCheckExportStatusInSeconds')) || 
