@@ -1,7 +1,7 @@
 # Guidance for Incremental Data Exports from Amazon DynamoDB to Amazon S3
 
 ## Overview
-This workflow allows you to continuously export a DynamoDB table to S3 incrementally every _f_ minutes (which defines the _frequency_). Traditionally exports to S3 were full table snapshots but since the [introduction of incremental exports](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/S3DataExport.HowItWorks.html) in 2023, you can now export your DynamoDB table between two points in time. 
+This workflow allows you to continuously export a DynamoDB table to S3 incrementally every _f_ hours (which defines the _frequency_). Traditionally exports to S3 were full table snapshots but since the [introduction of incremental exports](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/S3DataExport.HowItWorks.html) in 2023, you can now export your DynamoDB table between two points in time. 
 
 With this repository you can quickly start exporting data from your DynamoDB table with minimal effort. Follow the [Deployment](#deployment-steps-running-the-guidance) guide to get started.
 
@@ -166,8 +166,8 @@ All the below parameters can be passed in via the `-c` or `--context` ([context]
 A bucket if you want to use one that already exists. Without this, a new bucket will be created for you. 
 1. Data export bucket prefix (`dataExportBucketPrefix`)  
 A prefix for where to store the exports within the bucket (optional). A prefix is a great way to use one bucket for many DynamoDB tables (one for each prefix). If a prefix isn't supplied exports will be stored at the root of the S3 bucket. Refer to [this](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/S3DataExport.Output.html) documentation to understand the folder structure further.
-1. Export window size (`incrementalExportWindowSizeInMinutes`)  
-The window size of each export. Default is 15 minutes. You can set as small as 15 mins or as large as 24 hours. If you don't need freshness, a less frequent export will result in less compute work and fewer S3 writes.
+1. Export window size (`incrementalExportWindowSizeInHours`)  
+The window size of each export, in hours. Must be a multiple of 3 between 3 and 24 (i.e. 3, 6, 9, 12, 15, 18, 21, or 24). Default is 3 hours. If you don't need freshness, a less frequent export will result in less compute work and fewer S3 writes.
 1. Wait time between export completed checks (`waitTimeToCheckExportStatusInSeconds`).  
 Wait time within the busy loop checking if the export is completed, in seconds. Default is 10 seconds. A large value will be less quick to proceed but perform fewer API invocations.
 1. Data export bucket SSE-KMS key ARN (`dataExportBucketSseKmsKeyArn`).  
@@ -242,7 +242,7 @@ The email sent upon failure will include details on cause. If the email contains
 No worries. The full export flow will trigger automatically on the next scheduled run or alternatively you can trigger the step function manually after fixing the error.
 
 #### Incremental exports falling behind
-It may happen that your incremental exports fall behind new updates. For example, if you set the `workflow-action` state to `PAUSE` or if you stop the scheduler for any reason (which is [not recommended](#ensure-long-term-success)) and resume at a later date, the incremental exports will start from the time you paused. This will result in the value of `incrementalBlocksBehind` to be more than 0. If this happens the Step Function is designed to automatically recover as it is invoked (via the EventBridge Scheduler) more frequently than the specified Export Window Size (`incrementalExportWindowSizeInMinutes`), specifically 1/3 of the specified window size. E.g. if your window size is 30 minutes, the EventBridge Scheduler is setup to run every 10 minutes. This allows the exports to catch-up.
+It may happen that your incremental exports fall behind new updates. For example, if you set the `workflow-action` state to `PAUSE` or if you stop the scheduler for any reason (which is [not recommended](#ensure-long-term-success)) and resume at a later date, the incremental exports will start from the time you paused. This will result in the value of `incrementalBlocksBehind` to be more than 0. If this happens the Step Function is designed to automatically recover as it is invoked (via the EventBridge Scheduler) more frequently than the specified Export Window Size (`incrementalExportWindowSizeInHours`), specifically 1/3 of the specified window size. E.g. if your window size is 6 hours, the EventBridge Scheduler is setup to run every 2 hours. This allows the exports to catch-up.
 
 #### Infrastructure was changed behind the scenes
 Improper changes to the infrastructure can often be fixed by redeploying, such as:

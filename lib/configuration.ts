@@ -12,7 +12,7 @@ export class Configuration {
   dataExportBucketName: string;
   dataExportBucketPrefix: string;
   dataExportBucketSseKmsKeyArn: string;
-  incrementalExportWindowSizeInMinutes: number;
+  incrementalExportWindowSizeInHours: number;
   waitTimeToCheckExportStatusInSeconds: number;
   exportViewType: ExportViewType;
   exportFormat: ExportFormat;
@@ -27,8 +27,8 @@ export class Configuration {
     this.dataExportBucketName = scope.node.tryGetContext('dataExportBucketName') as string;
     this.dataExportBucketPrefix = scope.node.tryGetContext('dataExportBucketPrefix') as string;
     this.dataExportBucketSseKmsKeyArn = scope.node.tryGetContext('dataExportBucketSseKmsKeyArn') as string;
-    this.incrementalExportWindowSizeInMinutes = parseInt(scope.node.tryGetContext('incrementalExportWindowSizeInMinutes')) || 
-      IncrementalExportDefaults.DEFAULT_INCREMENTAL_EXPORT_WINDOW_SIZE_IN_MINUTES;
+    this.incrementalExportWindowSizeInHours = parseInt(scope.node.tryGetContext('incrementalExportWindowSizeInHours')) || 
+      IncrementalExportDefaults.DEFAULT_INCREMENTAL_EXPORT_WINDOW_SIZE_IN_HOURS;
     this.waitTimeToCheckExportStatusInSeconds = parseInt(scope.node.tryGetContext('waitTimeToCheckExportStatusInSeconds')) || 
       IncrementalExportDefaults.WAIT_TIME_TO_CHECK_EXPORT_STATUS_IN_SECONDS;
     this.exportFormat = scope.node.tryGetContext('exportFormat') as ExportFormat || 

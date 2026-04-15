@@ -34,7 +34,7 @@ export class NodeBuilder {
     private workflowStateParameterName: string;
     private workflowActionParameterName: string;
 
-    private incrementalExportWindowSizeInMinutes: number;
+    private incrementalExportWindowSizeInHours: number;
     private waitTimeToCheckExportStatusInSeconds: number;
     private exportViewType: ExportViewType;
     private awsApiInvocationTaskTimeout: sfn.Timeout;
@@ -112,7 +112,7 @@ export class NodeBuilder {
         this.snsTopic = snsTopic;
         this.incrementalExportTimeManipulatorFunction = incrementalExportTimeManipulatorFunction;
 
-        this.incrementalExportWindowSizeInMinutes = configuration.incrementalExportWindowSizeInMinutes;
+        this.incrementalExportWindowSizeInHours = configuration.incrementalExportWindowSizeInHours;
         this.waitTimeToCheckExportStatusInSeconds = configuration.waitTimeToCheckExportStatusInSeconds;
         this.exportViewType = configuration.exportViewType;
 
@@ -256,7 +256,7 @@ export class NodeBuilder {
               {
                 'executionId.$': '$$.Execution.Id',
                 'lastExportTime.$': `$.${StepFunctionOutputConstants.EXPORT_TIME_PARAMETER_TO_USE_OUTPUT}.exportTimeParameterToUse`,
-                'incrementalExportWindowSizeInMinutes': this.incrementalExportWindowSizeInMinutes,
+                'incrementalExportWindowSizeInHours': this.incrementalExportWindowSizeInHours,
                 'tableArn': this.sourceDynamoDbTable.tableArn,
                 'bucket': this.sourceDataExportBucket.bucket.bucketName,
                 'bucketPrefix': this.sourceDataExportBucket.prefix,
