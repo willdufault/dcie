@@ -170,6 +170,14 @@ A prefix for where to store the exports within the bucket (optional). A prefix i
 The window size of each export. Default is 15 minutes. You can set as small as 15 mins or as large as 24 hours. If you don't need freshness, a less frequent export will result in less compute work and fewer S3 writes.
 1. Wait time between export completed checks (`waitTimeToCheckExportStatusInSeconds`).  
 Wait time within the busy loop checking if the export is completed, in seconds. Default is 10 seconds. A large value will be less quick to proceed but perform fewer API invocations.
+1. Data export bucket SSE-KMS key ARN (`dataExportBucketSseKmsKeyArn`).  
+The ARN of a customer-managed KMS key to use for SSE-KMS encryption. When specified, it is applied in two ways: (1) if a new export bucket is being created (i.e. `dataExportBucketName` is not provided), the bucket will be encrypted with this key; (2) the key ARN is always passed to the DynamoDB export API call (`S3SseKmsKeyId`), so exports written to S3 are encrypted with this key regardless of whether the bucket is new or existing. If omitted and a new bucket is created, the bucket defaults to AWS-managed KMS encryption.
+1. Export format (`exportFormat`).  
+The format used for the DynamoDB exports written to S3. Default is `DYNAMODB_JSON`. Also supports `ION`. Refer to [this](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/S3DataExport.Output.html) documentation for more details on the export formats.
+1. Export view type (`exportViewType`).  
+Determines which item images are included in each incremental export. Default is `NEW_AND_OLD_IMAGES`, which captures both the before and after state of each change. Also supports `NEW_IMAGES`, which captures only the state after each change. Refer to [this](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/S3DataExport.HowItWorks.html) documentation for more details.
+1. AWS API invocation timeout (`awsApiInvocationTimeoutInSeconds`).  
+Timeout in seconds applied to AWS SDK/API calls made within the workflow. Default is 10 seconds. Increase this value if you observe transient timeout errors in high-latency environments.
 
 ## What's deployed
 
