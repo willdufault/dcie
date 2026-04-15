@@ -97,7 +97,8 @@ export class DynamoDbContinuousIncrementalExportsStack extends cdk.Stack {
       flexibleTimeWindow: {
         mode: ScheduleConstants.SCHEDULE_MODE_OFF
       },
-      scheduleExpression: `rate(${schedulerTime} minutes)`,
+      scheduleExpression: `cron(0/${schedulerTime} * * * ? *)`,
+      scheduleExpressionTimezone: this.configuration.scheduleTimezone,
       target: {
         arn: incrementalExportStateMachine.stateMachineArn,
         roleArn: schedulerRole.roleArn,
@@ -426,6 +427,22 @@ export class DynamoDbContinuousIncrementalExportsStack extends cdk.Stack {
 
     if (this.configuration.incrementalExportWindowSizeInMinutes < 15 || this.configuration.incrementalExportWindowSizeInMinutes > 24*60) {
       throw new Error(`incrementalExportWindowSizeInMinutes has to be between 15 minutes and 1,440 minutes (24h)`);
+    }
+
+    if (!this.isValidTimezone(this.configuration.scheduleTimezone)) {
+      throw new Error(
+        `scheduleTimezone '${this.configuration.scheduleTimezone}' is not a valid IANA timezone string ` +
+        `(e.g. 'America/New_York', 'UTC').`
+      );
+    }
+  }
+
+  private isValidTimezone(tz: string): boolean {
+    try {
+      new Intl.DateTimeFormat(undefined, { timeZone: tz });
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 

@@ -178,6 +178,8 @@ The format used for the DynamoDB exports written to S3. Default is `DYNAMODB_JSO
 Determines which item images are included in each incremental export. Default is `NEW_AND_OLD_IMAGES`, which captures both the before and after state of each change. Also supports `NEW_IMAGES`, which captures only the state after each change. Refer to [this](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/S3DataExport.HowItWorks.html) documentation for more details.
 1. AWS API invocation timeout (`awsApiInvocationTimeoutInSeconds`).  
 Timeout in seconds applied to AWS SDK/API calls made within the workflow. Default is 10 seconds. Increase this value if you observe transient timeout errors in high-latency environments.
+1. Schedule timezone (`scheduleTimezone`).  
+The IANA timezone in which the EventBridge cron schedule is expressed. Default is `America/New_York`. Any valid IANA timezone string is accepted (e.g. `UTC`, `America/Los_Angeles`, `Europe/London`).
 
 ## What's deployed
 

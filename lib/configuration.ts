@@ -2,6 +2,7 @@ import { Construct } from 'constructs';
 import { IncrementalExportDefaults } from './constants/incrementalExportDefaults';
 import { ExportViewType } from './constants/exportViewType';
 import { ExportFormat } from './constants/exportFormat';
+import { ScheduleConstants } from './constants/scheduleConstants';
 
 export class Configuration {
   sourceDynamoDbTableName: string;
@@ -16,6 +17,7 @@ export class Configuration {
   exportViewType: ExportViewType;
   exportFormat: ExportFormat;
   awsApiInvocationTimeoutInSeconds: number;
+  scheduleTimezone: string;
 
   constructor(scope: Construct) {
     this.sourceDynamoDbTableName = scope.node.tryGetContext('sourceDynamoDbTableName') as string;
@@ -36,5 +38,8 @@ export class Configuration {
 
     this.awsApiInvocationTimeoutInSeconds = parseInt(scope.node.tryGetContext('awsApiInvocationTimeoutInSeconds')) || 
       IncrementalExportDefaults.AWS_API_INVOCATION_TIMEOUT_IN_SECONDS;
+
+    this.scheduleTimezone = scope.node.tryGetContext('scheduleTimezone') as string ||
+      ScheduleConstants.DEFAULT_SCHEDULE_TIMEZONE;
   }
 }
