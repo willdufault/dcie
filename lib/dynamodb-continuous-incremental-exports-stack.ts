@@ -330,8 +330,8 @@ export class DynamoDbContinuousIncrementalExportsStack extends cdk.Stack {
     const stateMachineLogGroup = new logs.LogGroup(this, 'incremental-export-log-group', {
       logGroupName: `${this.configuration.deploymentAlias}-incremental-export-log-group`,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
-      retention: logs.RetentionDays.FIVE_DAYS,
-      logGroupClass: logs.LogGroupClass.INFREQUENT_ACCESS
+      retention: logs.RetentionDays.ONE_WEEK,
+      logGroupClass: logs.LogGroupClass.STANDARD
     });
 
     const stateMachineName = `${this.configuration.deploymentAlias}-ddb-export-state-machine`;
@@ -386,8 +386,8 @@ export class DynamoDbContinuousIncrementalExportsStack extends cdk.Stack {
     const incrementalExportTimeManipulatorLogGroup = new logs.LogGroup(this, 'incremental-export-time-manipulator-log-group', {
       logGroupName: `${this.configuration.deploymentAlias}-incremental-export-time-manipulator-log-group`,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
-      retention: logs.RetentionDays.FIVE_DAYS,
-      logGroupClass: logs.LogGroupClass.INFREQUENT_ACCESS
+      retention: logs.RetentionDays.ONE_WEEK,
+      logGroupClass: logs.LogGroupClass.STANDARD
     });
 
     const incrementalExportTimeManipulatorLambdaExecutionRole = new iam.Role(this, 'incremental-export-time-manipulator-role', {
