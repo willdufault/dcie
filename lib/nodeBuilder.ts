@@ -261,7 +261,8 @@ export class NodeBuilder {
                 'bucket': this.sourceDataExportBucket.bucket.bucketName,
                 'bucketPrefix': this.sourceDataExportBucket.prefix,
                 'exportFormat': IncrementalExportDefaults.DATA_EXPORT_FORMAT,
-                'exportViewType': ExportViewType[this.exportViewType]
+                'exportViewType': ExportViewType[this.exportViewType],
+                'sseKmsKeyArn': this.sourceDataExportBucket.sseKmsKeyArn
               }),
             resultPath: `$.${StepFunctionOutputConstants.GET_NEXT_INCREMENTAL_EXPORT_TIME_OUTPUT}`
           });

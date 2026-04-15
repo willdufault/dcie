@@ -10,3 +10,6 @@ cdk.out
 ash_output
 test/other
 .DS_Store
+
+# cdk config
+cdk.json

@@ -47,6 +47,7 @@ export class DynamoDbContinuousIncrementalExportsStack extends cdk.Stack {
       account: this.account,
       region: this.region,
       name: this.configuration.dataExportBucketName,
+      sseKmsKeyArn: this.configuration.dataExportBucketSseKmsKeyArn,
       sourceDdbTablename: this.configuration.sourceDynamoDbTableName,
       deploymentAlias: this.configuration.deploymentAlias,
       prefix: this.configuration.dataExportBucketPrefix,
@@ -365,6 +366,15 @@ export class DynamoDbContinuousIncrementalExportsStack extends cdk.Stack {
       actions: ['kms:GenerateDataKey', 'kms:Decrypt'],
       resources: [kmsKeyUsedForSnsTopic.keyArn]
     }));
+
+    if (this.sourceDataExportBucket.sseKmsKeyArn) {
+      stateMachine.addToRolePolicy(new iam.PolicyStatement(
+      {
+        effect: iam.Effect.ALLOW,
+        actions: ['kms:GenerateDataKey', 'kms:Decrypt'],
+        resources: [this.sourceDataExportBucket.sseKmsKeyArn]
+      }));
+    }
 
     return stateMachine;
   }
