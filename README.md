@@ -20,8 +20,7 @@ Assumptions
 | AWS Lambda | ~12 invocations per hour, 128MB memory | $ 0.00 month |
 | AWS Step Functions | ~12 invocations per hour, 25 invocations per workflow | $ 5.38 month |
 | AWS Systems Manager | 5 standard parameters, ~36 API interactions per hour | $ 0.00 month |
-| Amazon SNS | ~520 requests per month, ~520 email notifications | $ 0.00 month |
-| AWS KMS | 1 CMK, ~3000 symmetric requests | $ 1.01 month |
+| Amazon SNS | ~520 requests per month | $ 0.00 month |
 
 For further experimentation please feel free to use the [AWS Pricing Calculator](https://calculator.aws/#/estimate?id=5761d33c568fc9c3bba5a4ec682212c9b481717e) for this solution.
 
@@ -41,14 +40,12 @@ Commands below are for `bash` on a MacOS
 1. Deploying the solution requires some parameterized values. The easiest way to set these is to create shell environment variables.
     1. `TABLE_NAME` - The name of your table, also used to create the stack name. Each table gets its own stack.
     1. `DEPLOYMENT_ALIAS` - The alias of your deployment, ensures all infrastructure created can be grouped/identified. Can only contain lower case alphanumeric characters with a maximum of 15 characters. Recommend to use a string which maps closely to your DynamoDB table name. E.g. if your DynamoDB table is called `unicorn_activities` then the _DEPLOYMENT__ALIAS_ could be `unicornact`.
-    1. `SUCCESS_EMAIL` - Email address to be notified when the workflow succeeds.
-    1. `FAILURE_EMAIL` - Email address to be notified if the workflow fails.
+    1. `NOTIFICATION_TOPIC_ARN` - ARN of the existing SNS topic to send all workflow notifications to.
     1. Putting it all together
         ```bash
         TABLE_NAME=YourTableName
         DEPLOYMENT_ALIAS=YourDeploymentAlias
-        SUCCESS_EMAIL=success-tablename@example.com
-        FAILURE_EMAIL=failure-tablename@example.com
+        NOTIFICATION_TOPIC_ARN=arn:aws:sns:us-east-1:123456789012:your-topic
         ```
 1. Now execute `cdk synth` (uses the above environment variables):
     ```bash
@@ -56,8 +53,7 @@ Commands below are for `bash` on a MacOS
         -c stackName=$DEPLOYMENT_ALIAS-incremental-export-stack \
         -c sourceDynamoDbTableName=$TABLE_NAME \
         -c deploymentAlias=$DEPLOYMENT_ALIAS \
-        -c successNotificationEmail=$SUCCESS_EMAIL \
-        -c failureNotificationEmail=$FAILURE_EMAIL
+        -c notificationTopicArn=$NOTIFICATION_TOPIC_ARN
     ```
 1. Deploy the solution using `cdk deploy`
     ```bash
@@ -65,8 +61,7 @@ Commands below are for `bash` on a MacOS
         -c stackName=$DEPLOYMENT_ALIAS-incremental-export-stack \
         -c sourceDynamoDbTableName=$TABLE_NAME \
         -c deploymentAlias=$DEPLOYMENT_ALIAS \
-        -c successNotificationEmail=$SUCCESS_EMAIL \
-        -c failureNotificationEmail=$FAILURE_EMAIL
+        -c notificationTopicArn=$NOTIFICATION_TOPIC_ARN
     ```
 
 ### Deployment validation
@@ -88,8 +83,7 @@ Your redeployment process would look like below:
     ```bash
     TABLE_NAME=YourTableName
     DEPLOYMENT_ALIAS=YourDeploymentAlias
-    SUCCESS_EMAIL=success-tablename@example.com
-    FAILURE_EMAIL=failure-tablename@example.com
+    NOTIFICATION_TOPIC_ARN=arn:aws:sns:us-east-1:123456789012:your-topic
     BUCKET_NAME=somebucket
     BUCKET_PREFIX=someprefix
     ```
@@ -99,8 +93,7 @@ Your redeployment process would look like below:
       -c stackName=$DEPLOYMENT_ALIAS-incremental-export-stack \
       -c sourceDynamoDbTableName=$TABLE_NAME \
       -c deploymentAlias=$DEPLOYMENT_ALIAS \
-      -c successNotificationEmail=$SUCCESS_EMAIL \
-      -c failureNotificationEmail=$FAILURE_EMAIL \
+      -c notificationTopicArn=$NOTIFICATION_TOPIC_ARN \
       -c dataExportBucketName=$BUCKET_NAME \
       -c dataExportBucketPrefix=$BUCKET_PREFIX
   ```
@@ -110,8 +103,7 @@ Your redeployment process would look like below:
       -c stackName=$DEPLOYMENT_ALIAS-incremental-export-stack \
       -c sourceDynamoDbTableName=$TABLE_NAME \
       -c deploymentAlias=$DEPLOYMENT_ALIAS \
-      -c successNotificationEmail=$SUCCESS_EMAIL \
-      -c failureNotificationEmail=$FAILURE_EMAIL \
+      -c notificationTopicArn=$NOTIFICATION_TOPIC_ARN \
       -c dataExportBucketName=$BUCKET_NAME \
       -c dataExportBucketPrefix=$BUCKET_PREFIX
   ```
@@ -301,7 +293,7 @@ All notifications are sent to a single SNS topic with the schema:
   }
 }
 ```
-And by default there are two email subscriptions setup to listen to `SUCCESS` and `FAILED` status messages respectively. More subscriptions can be added here to enable further dashboards and automation.
+Subscriptions to the provided SNS topic are managed externally. The topic receives all notifications (both `SUCCESS` and `FAILED` status messages). More subscriptions can be added to the topic to enable further dashboards and automation.
 
 #### Flexibility with exports in S3
 With the versatility with your DynamoDB exports in S3 you can choose to leverage a number of downstream AWS services to derive value from your exports, e.g. [update an Apache Iceberg table](https://aws.amazon.com/blogs/database/use-amazon-dynamodb-incremental-export-to-update-apache-iceberg-tables/) or create a copy of your data for non-production use cases
