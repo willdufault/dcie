@@ -326,7 +326,9 @@ export class NodeBuilder {
         // Refer to: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/S3DataExport_Requesting.html
         const exportToS3IamPolicyStatement = new iam.PolicyStatement({
             actions: ['s3:AbortMultipartUpload', 's3:PutObject', 's3:PutObjectAcl'],
-            resources: [this.sourceDataExportBucket.bucket.arnForObjects('*')],
+            resources: [this.sourceDataExportBucket.hasPrefix()
+                ? this.sourceDataExportBucket.bucket.arnForObjects(`${this.sourceDataExportBucket.prefix}/*`)
+                : this.sourceDataExportBucket.bucket.arnForObjects('*')],
             effect: iam.Effect.ALLOW,
             sid: 'AllowWriteToDestinationBucket'
         });
