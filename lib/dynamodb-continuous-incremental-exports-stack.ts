@@ -88,16 +88,19 @@ export class DynamoDbContinuousIncrementalExportsStack extends cdk.Stack {
       }
     });
 
-    /* 
-     * If the scheduler is stopped, we need capability to automatically catch-up, 
-     * therefore the scheduler needs to run more often. So we divide the time period by 3
+    /*
+     * If the scheduler is stopped, we need capability to automatically catch-up,
+     * therefore the scheduler needs to run more often. So we divide the time period by 3.
+     * All valid inputs are multiples of 3, so division is always exact in IEEE 754.
+     * Math.round is used defensively in case of any future floating-point edge case.
      */
-    const schedulerTime = Math.floor(this.configuration.incrementalExportWindowSizeInMinutes/3);
+    const schedulerHours = Math.round(this.configuration.incrementalExportWindowSizeInHours / 3);
     const cfnSchedule = new scheduler.CfnSchedule(this, 'step-function-trigger-schedule', {
       flexibleTimeWindow: {
         mode: ScheduleConstants.SCHEDULE_MODE_OFF
       },
-      scheduleExpression: `rate(${schedulerTime} minutes)`,
+      scheduleExpression: `cron(0 0/${schedulerHours} * * ? *)`,
+      scheduleExpressionTimezone: this.configuration.scheduleTimezone,
       target: {
         arn: incrementalExportStateMachine.stateMachineArn,
         roleArn: schedulerRole.roleArn,
@@ -107,7 +110,7 @@ export class DynamoDbContinuousIncrementalExportsStack extends cdk.Stack {
           maximumRetryAttempts: 5,
         },
       },
-      description: `Triggers the step function every ${schedulerTime} minutes`,
+      description: `Triggers the step function every ${schedulerHours} hour(s)`,
       name: `${this.configuration.deploymentAlias}-incremental-export-schedule`,
       state: KeywordConstants.ENABLED
     });
@@ -330,8 +333,8 @@ export class DynamoDbContinuousIncrementalExportsStack extends cdk.Stack {
     const stateMachineLogGroup = new logs.LogGroup(this, 'incremental-export-log-group', {
       logGroupName: `${this.configuration.deploymentAlias}-incremental-export-log-group`,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
-      retention: logs.RetentionDays.FIVE_DAYS,
-      logGroupClass: logs.LogGroupClass.INFREQUENT_ACCESS
+      retention: logs.RetentionDays.ONE_WEEK,
+      logGroupClass: logs.LogGroupClass.STANDARD
     });
 
     const stateMachineName = `${this.configuration.deploymentAlias}-ddb-export-state-machine`;
@@ -386,8 +389,8 @@ export class DynamoDbContinuousIncrementalExportsStack extends cdk.Stack {
     const incrementalExportTimeManipulatorLogGroup = new logs.LogGroup(this, 'incremental-export-time-manipulator-log-group', {
       logGroupName: `${this.configuration.deploymentAlias}-incremental-export-time-manipulator-log-group`,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
-      retention: logs.RetentionDays.FIVE_DAYS,
-      logGroupClass: logs.LogGroupClass.INFREQUENT_ACCESS
+      retention: logs.RetentionDays.ONE_WEEK,
+      logGroupClass: logs.LogGroupClass.STANDARD
     });
 
     const incrementalExportTimeManipulatorLambdaExecutionRole = new iam.Role(this, 'incremental-export-time-manipulator-role', {
@@ -424,9 +427,30 @@ export class DynamoDbContinuousIncrementalExportsStack extends cdk.Stack {
     if (!this.isValidDeploymentAlias())
       throw new Error(`deploymentAlias has to be an alphanumeric string between 1 and 15 characters`);
 
-    if (this.configuration.incrementalExportWindowSizeInMinutes < 15 || this.configuration.incrementalExportWindowSizeInMinutes > 24*60) {
-      throw new Error(`incrementalExportWindowSizeInMinutes has to be between 15 minutes and 1,440 minutes (24h)`);
+    if (!this.isValidExportWindowSizeInHours()) {
+      throw new Error(`incrementalExportWindowSizeInHours must be a multiple of 3 between 3 and 24 (e.g. 3, 6, 9, 12, 15, 18, 21, 24)`);
     }
+
+    if (!this.isValidTimezone(this.configuration.scheduleTimezone)) {
+      throw new Error(
+        `scheduleTimezone '${this.configuration.scheduleTimezone}' is not a valid IANA timezone string ` +
+        `(e.g. 'America/New_York', 'UTC').`
+      );
+    }
+  }
+
+  private isValidTimezone(tz: string): boolean {
+    try {
+      new Intl.DateTimeFormat(undefined, { timeZone: tz });
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  private isValidExportWindowSizeInHours(): boolean {
+    const h = this.configuration.incrementalExportWindowSizeInHours;
+    return h >= 3 && h <= 24 && h % 3 === 0;
   }
 
   private isValidDeploymentAlias(): boolean {
