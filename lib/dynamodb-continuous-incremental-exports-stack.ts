@@ -3,7 +3,6 @@ import * as cdk from 'aws-cdk-lib';
 import {
   aws_dynamodb as ddb,
   aws_iam as iam,
-  aws_kms as kms,
   aws_lambda as lambda,
   aws_logs as logs,
   aws_scheduler as scheduler,
@@ -27,7 +26,7 @@ export class DynamoDbContinuousIncrementalExportsStack extends cdk.Stack {
   private sourceDataExportBucket: DataExportBucket;
   private sourceDynamoDbTable: ddb.ITable;
 
-  private ddbExportNotificationTopic: sns.Topic;
+  private ddbExportNotificationTopic: sns.ITopic;
   private conditionBuilder: ConditionBuilder;
   private nodeBuilder: NodeBuilder;
 
@@ -56,13 +55,13 @@ export class DynamoDbContinuousIncrementalExportsStack extends cdk.Stack {
 
     this.sourceDynamoDbTable = ddb.Table.fromTableName(this, 'source-ddb-source-table', this.configuration.sourceDynamoDbTableName);
     
-    const kmsKeyUsedForSnsTopic = this.deployNotificationModule();
+    this.ddbExportNotificationTopic = sns.Topic.fromTopicArn(this, 'ddb-export-notification-topic', this.configuration.notificationTopicArn);
     const incrementalExportTimeManipulatorFunction = this.deployIncrementalExportTimeManipulatorFunction();
 
     this.conditionBuilder = new ConditionBuilder();
     this.nodeBuilder = new NodeBuilder(this, this.sourceDynamoDbTable, this.sourceDataExportBucket, this.ddbExportNotificationTopic, incrementalExportTimeManipulatorFunction, this.configuration);
 
-    const incrementalExportStateMachine = this.deployStepFunction(kmsKeyUsedForSnsTopic);
+    const incrementalExportStateMachine = this.deployStepFunction();
 
     const schedulerRole = new iam.Role(this, 'step-function-trigger-role', {
       roleName: `${this.configuration.deploymentAlias}-incremental-export-schedule-role`,
@@ -116,40 +115,6 @@ export class DynamoDbContinuousIncrementalExportsStack extends cdk.Stack {
     });
   }
 
-  private deployNotificationModule() : kms.Key {
-    const snsKey = new kms.Key(this, 'ddb-export-notification-topic-key', {
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-      pendingWindow: cdk.Duration.days(7),
-      description: `Key for SSE for the notification topic used by incremental export for table ${this.sourceDynamoDbTable.tableName}`,
-      enableKeyRotation: true
-    });
-    cdk.Tags.of(snsKey).add('Name', `${this.configuration.deploymentAlias}-ddb-export-notification-topic-key`);
-
-    const topicName = `${this.configuration.deploymentAlias}-notification-topic`;
-    this.ddbExportNotificationTopic = new sns.Topic(this, 'ddb-export-notification-topic', {
-      displayName: topicName,
-      topicName: topicName,
-      enforceSSL: true,
-      masterKey: snsKey
-    });
-
-    const successNotificationSub = new sns.Subscription(this, 'ddb-export-notification-success-subsc', {
-      topic: this.ddbExportNotificationTopic,
-      endpoint: this.configuration.successNotificationEmail,
-      protocol: sns.SubscriptionProtocol.EMAIL,
-      filterPolicyWithMessageBody: { status: sns.FilterOrPolicy.filter(sns.SubscriptionFilter.stringFilter({ allowlist: ['SUCCESS'] })) }
-    });
-
-    const failureNotificationSub = new sns.Subscription(this, 'ddb-export-notification-failure-subsc', {
-      topic: this.ddbExportNotificationTopic,
-      endpoint: this.configuration.failureNotificationEmail,
-      protocol: sns.SubscriptionProtocol.EMAIL,
-      filterPolicyWithMessageBody: { status: sns.FilterOrPolicy.filter(sns.SubscriptionFilter.stringFilter({ allowlist: ['FAILED'] })) }
-    });
-
-    return snsKey;
-  }
-
   private dynamoDbSdkRetryHandler() : any {
     return {
       errors: ['DynamoDb.SdkClientException'], 
@@ -168,7 +133,7 @@ export class DynamoDbContinuousIncrementalExportsStack extends cdk.Stack {
     };
   }
 
-  private deployStepFunction(kmsKeyUsedForSnsTopic: kms.Key) {
+  private deployStepFunction() {
 
     // alias for better readability
     const nb = this.nodeBuilder;
@@ -363,12 +328,6 @@ export class DynamoDbContinuousIncrementalExportsStack extends cdk.Stack {
         'logs:UpdateLogDelivery'],
       resources: [stateMachineLogGroup.logGroupArn]
     }));
-    stateMachine.addToRolePolicy(new iam.PolicyStatement(
-    {
-      effect: iam.Effect.ALLOW,
-      actions: ['kms:GenerateDataKey', 'kms:Decrypt'],
-      resources: [kmsKeyUsedForSnsTopic.keyArn]
-    }));
 
     if (this.sourceDataExportBucket.sseKmsKeyArn) {
       stateMachine.addToRolePolicy(new iam.PolicyStatement(
@@ -378,6 +337,8 @@ export class DynamoDbContinuousIncrementalExportsStack extends cdk.Stack {
         resources: [this.sourceDataExportBucket.sseKmsKeyArn]
       }));
     }
+
+    this.ddbExportNotificationTopic.grantPublish(stateMachine);
 
     return stateMachine;
   }

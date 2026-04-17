@@ -23,7 +23,7 @@ export class NodeBuilder {
 
     private scope: Construct;
     private sourceDynamoDbTable: ddb.ITable;
-    private snsTopic: sns.Topic;
+    private snsTopic: sns.ITopic;
     private incrementalExportTimeManipulatorFunction: lambda.Function;
     private sourceDataExportBucket: DataExportBucket;
 
@@ -104,7 +104,7 @@ export class NodeBuilder {
     waitForIncrementalExport: sfn.Wait;
     waitForFullExport: sfn.Wait;
 
-    constructor(scope: Construct, sourceDynamoDbTable: ddb.ITable, sourceDataExportBucket: DataExportBucket, snsTopic: sns.Topic, incrementalExportTimeManipulatorFunction: lambda.Function, configuration: Configuration) {
+    constructor(scope: Construct, sourceDynamoDbTable: ddb.ITable, sourceDataExportBucket: DataExportBucket, snsTopic: sns.ITopic, incrementalExportTimeManipulatorFunction: lambda.Function, configuration: Configuration) {
 
         this.scope = scope;
         this.sourceDynamoDbTable = sourceDynamoDbTable;
@@ -326,7 +326,9 @@ export class NodeBuilder {
         // Refer to: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/S3DataExport_Requesting.html
         const exportToS3IamPolicyStatement = new iam.PolicyStatement({
             actions: ['s3:AbortMultipartUpload', 's3:PutObject', 's3:PutObjectAcl'],
-            resources: [this.sourceDataExportBucket.bucket.arnForObjects('*')],
+            resources: [this.sourceDataExportBucket.hasPrefix()
+                ? this.sourceDataExportBucket.bucket.arnForObjects(`${this.sourceDataExportBucket.prefix}/*`)
+                : this.sourceDataExportBucket.bucket.arnForObjects('*')],
             effect: iam.Effect.ALLOW,
             sid: 'AllowWriteToDestinationBucket'
         });
